@@ -3,3 +3,4 @@ __pycache__
 _env/
 .vscode/
 *.code-workspace
+pdns-mysql-domain-expiration-check/settings_local.*
