@@ -13,6 +13,9 @@ conf_debug = False
 # in this mode it will check 1 domain in each TLD
 conf_debug_tld = (True and conf_debug)
 
+# address from wich you will receive email reports
+conf_from_email = 'admin@localhost'
+
 # tries for domain, max whois queries = number of domains * conf_try_factor
 conf_try_factor = 3
 
