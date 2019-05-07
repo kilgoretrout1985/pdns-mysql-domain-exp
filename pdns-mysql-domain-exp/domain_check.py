@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import mysqlclient
+import MySQLdb
 import pythonwhois
 
 from collections import Counter
