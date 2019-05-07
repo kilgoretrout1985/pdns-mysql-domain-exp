@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import MySQLdb
 import pythonwhois
 
 from collections import Counter
@@ -7,12 +6,15 @@ from collections import deque
 import datetime
 import time
 import socket
-from email.mime.text import MIMEText
 import subprocess
 import random
 import traceback
 import sys
 import re
+
+from lib.db import domains_from_db
+from lib.email import my_sendmail
+from lib.exceptions import MyTooManyWhoisQuerisError, MyWhoisBanError
 
 try:
     from settings_local import *
@@ -22,14 +24,6 @@ except ImportError:
 
 if conf_how == 'socket':
     socket.setdefaulttimeout(6)
-
-
-class MyTooManyWhoisQuerisError(Exception):
-    pass
-
-
-class MyWhoisBanError(Exception):
-    pass
 
 
 def get_tld(domain):
@@ -85,38 +79,9 @@ def whois_exp_check(domain):
     return None
 
 
-def my_sendmail(fr, to, subj, body):
-    msg = MIMEText(body, 'plain', 'utf-8')
-    msg["From"] = fr
-    msg["To"] = to
-    msg["Subject"] = subj
-    p = subprocess.Popen(["/usr/sbin/sendmail", "-t"], stdin=subprocess.PIPE)
-    return p.communicate(msg.as_string())
-
-
 if __name__ == '__main__':
     try:
-        # read all domains from DBs
-        domains = []
-        for connect_params in conf_db:
-            if 'charset' not in connect_params:
-                connect_params['charset'] = 'utf8'
-            db = MySQLdb.connect(**connect_params)
-            cursor = db.cursor()
-            
-            cursor.execute("SELECT count(id) FROM domains")
-            data = cursor.fetchall()
-            max_i = int(data[0][0])
-            if max_i > 0:
-                for i in range(0, max_i, conf_db_limit):
-                    cursor.execute("SELECT name FROM domains ORDER BY id ASC LIMIT %d, %d" % (i, conf_db_limit))
-                    data = cursor.fetchall()
-                    for rec in data:
-                        domain = rec[0]
-                        if domain.count('.') == 1: # не сабдомены
-                            domains.append(domain.lower().strip())
-            
-            db.close()
+        domains = domains_from_db(conf_db, conf_db_limit)
         
         # для проверки парсера оставим по одному домену из каждой tld
         if conf_debug_tld:
