@@ -67,20 +67,20 @@ def whois_exp_check(domain):
     try:
         expires = result['expiration_date'][0]  # datetime.datetime obj
         if conf_debug:
-            print domain, expires, 'domains left:', len(domains), 'try:', try_cnt
+            print(domain, expires, 'domains left:', len(domains), 'try:', try_cnt)
         days = int((expires - now_dt).days)
         if days <= conf_days_left:
-            return u"%d дней осталось" % (days)
+            return "%d дней осталось" % (days)
     except (KeyError, IndexError,):
         raw_whois_txt = "\n\n".join(raw_whois)
         if conf_debug:
-            print domain
-            print raw_whois_txt  # full whois response text
-            print ""
+            print(domain)
+            print(raw_whois_txt)  # full whois response text
+            print("")
         if 'whois limit exceeded' in raw_whois_txt.lower():  # org whois ban?
             raise MyWhoisBanError('%s whois banned us.' % (tld.upper()))
         # нет expiration_date, значит домен свободен
-        return u"предположительно истек"
+        return "предположительно истек"
     
     return None
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
             data = cursor.fetchall()
             max_i = int(data[0][0])
             if max_i > 0:
-                for i in xrange(0, max_i, conf_db_limit):
+                for i in range(0, max_i, conf_db_limit):
                     cursor.execute("SELECT name FROM domains ORDER BY id ASC LIMIT %d, %d" % (i, conf_db_limit))
                     data = cursor.fetchall()
                     for rec in data:
@@ -120,7 +120,7 @@ if __name__ == '__main__':
         
         # для проверки парсера оставим по одному домену из каждой tld
         if conf_debug_tld:
-            print "Debug mode: checking only 1 domain in each TLD:"
+            print("Debug mode: checking only 1 domain in each TLD:")
             domains_unique_tld = []
             tlds = []
             for domain in domains:
@@ -128,10 +128,10 @@ if __name__ == '__main__':
                 if tld not in tlds:
                     tlds.append(tld)
                     domains_unique_tld.append(domain)
-                    print "%s: %s" % (tld, domain)
+                    print("%s: %s" % (tld, domain))
             domains = domains_unique_tld
             tlds = None
-            print ""
+            print("")
         
         # unique check
         duplicate_domains = []
@@ -163,39 +163,39 @@ if __name__ == '__main__':
                 raise # reraise to stop execution of the script
             except MyWhoisBanError as e:
                 if conf_debug:
-                    print domain
-                    print type(e)
-                    print e
-                    print ""
+                    print(domain)
+                    print(type(e))
+                    print(e)
+                    print("")
                 domains.append(domain)
                 time.sleep(60-8)
             except (subprocess.CalledProcessError, socket.timeout, socket.error) as e:
                 if conf_debug:
-                    print domain
-                    print type(e)
-                    print e
+                    print(domain)
+                    print(type(e))
+                    print(e)
                     traceback.print_exc(file=sys.stdout)
-                    print ""
+                    print("")
                 domains.append(domain)
         
         # report about problems
         if expired_domains or duplicate_domains:
-            msg_txt = u'Всего проверено %d доменов за %d запросов.\r\n' % ((max_try/conf_try_factor), try_cnt)
+            msg_txt = 'Всего проверено %d доменов за %d запросов.\r\n' % ((max_try/conf_try_factor), try_cnt)
             if expired_domains:
-                msg_txt += u"\r\nИстекающие домены:\r\n"
+                msg_txt += "\r\nИстекающие домены:\r\n"
                 for key in expired_domains:
-                    msg_txt += u"%s %s\r\n" % (key, expired_domains[key])
+                    msg_txt += "%s %s\r\n" % (key, expired_domains[key])
             if duplicate_domains:
-                msg_txt += u"\r\nДублирующиеся записи:\r\n%s\r\n" % (u"\r\n".join(duplicate_domains))
+                msg_txt += "\r\nДублирующиеся записи:\r\n%s\r\n" % ("\r\n".join(duplicate_domains))
             
             if sys.platform == 'win32':
-                print msg_txt.encode('cp866', 'ignore')  # console
+                print(msg_txt.encode('cp866', 'ignore'))  # console
             else:
                 for to in conf_mailto:
-                    my_sendmail(conf_from_email, to, u"Истекающие домены", msg_txt) # email
+                    my_sendmail(conf_from_email, to, "Истекающие домены", msg_txt) # email
         
     except Exception as e:
-        print "Top-level exception occured!"
-        print type(e)
-        print e
+        print("Top-level exception occured!")
+        print(type(e))
+        print(e)
         traceback.print_exc(file=sys.stdout)
