@@ -49,7 +49,7 @@ def find_duplicates(domains: list) -> tuple:
         counted = Counter(domains)
         duplicate_domains = [x for x in counted if counted[x] > 1]
         domains = list(set(domains))  # do not need duplicates any more
-        return (domains, duplicate_domains)
+    return (domains, duplicate_domains)
 
 
 def whois_exp_check(domain: str) -> Union[str, None]:
