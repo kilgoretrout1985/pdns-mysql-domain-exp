@@ -11,6 +11,7 @@ import random
 import traceback
 import sys
 import re
+from typing import Union
 
 from lib.db import domains_from_db
 from lib.email import my_sendmail
@@ -26,11 +27,32 @@ if conf_how == 'socket':
     socket.setdefaulttimeout(6)
 
 
-def get_tld(domain):
+def get_tld(domain: str) -> str:
     return re.search(r'.+\.([a-z]{2,})$', domain).group(1)
 
 
-def whois_exp_check(domain):
+def unique_tld_domains_only(domains: list) -> list:
+    """Only 1 domain for each TLD for debug run"""
+    domains_unique_tld = []
+    tlds = []
+    for domain in domains:
+        tld = get_tld(domain).upper()
+        if tld not in tlds:
+            tlds.append(tld)
+            domains_unique_tld.append(domain)
+    return domains_unique_tld
+
+
+def find_duplicates(domains: list) -> tuple:
+    duplicate_domains = []
+    if len(domains) != len(set(domains)):
+        counted = Counter(domains)
+        duplicate_domains = [x for x in counted if counted[x] > 1]
+        domains = list(set(domains))  # do not need duplicates any more
+        return (domains, duplicate_domains)
+
+
+def whois_exp_check(domain: str) -> Union[str, None]:
     """ checks if domain is already expired or close to it """
     tld = get_tld(domain)
     
@@ -53,7 +75,7 @@ def whois_exp_check(domain):
         else:
             raw_whois = pythonwhois.net.get_whois_raw(domain)
     
-    # должен быть массивом (внутренний формат библиотеки)    
+    # must e a list (internal pythonwhois format)   
     if type(raw_whois) is not list:
         raw_whois = [raw_whois,]
     result = pythonwhois.parse.parse_raw_whois(raw_whois, True)
@@ -64,17 +86,17 @@ def whois_exp_check(domain):
             print(domain, expires, 'domains left:', len(domains), 'try:', try_cnt)
         days = int((expires - now_dt).days)
         if days <= conf_days_left:
-            return "%d дней осталось" % (days)
+            return "%d days left" % days
     except (KeyError, IndexError,):
         raw_whois_txt = "\n\n".join(raw_whois)
         if conf_debug:
             print(domain)
             print(raw_whois_txt)  # full whois response text
             print("")
-        if 'whois limit exceeded' in raw_whois_txt.lower():  # org whois ban?
+        if 'whois limit exceeded' in raw_whois_txt.lower():  # whois ban?
             raise MyWhoisBanError('%s whois banned us.' % (tld.upper()))
-        # нет expiration_date, значит домен свободен
-        return "предположительно истек"
+        # no expiration_date, this domain must be free
+        return "probably expired"
     
     return None
 
@@ -83,27 +105,12 @@ if __name__ == '__main__':
     try:
         domains = domains_from_db(conf_db, conf_db_limit)
         
-        # для проверки парсера оставим по одному домену из каждой tld
         if conf_debug_tld:
             print("Debug mode: checking only 1 domain in each TLD:")
-            domains_unique_tld = []
-            tlds = []
-            for domain in domains:
-                tld = get_tld(domain).upper()
-                if tld not in tlds:
-                    tlds.append(tld)
-                    domains_unique_tld.append(domain)
-                    print("%s: %s" % (tld, domain))
-            domains = domains_unique_tld
-            tlds = None
-            print("")
+            domains = unique_tld_domains_only(domains)
         
         # unique check
-        duplicate_domains = []
-        if len(domains) != len(set(domains)):
-            counted = Counter(domains)
-            duplicate_domains = [x for x in counted if counted[x] > 1]
-            domains = list(set(domains)) # дубли больше не нужны
+        domains, duplicate_domains = find_duplicates(domains)
         
         # expired check
         random.shuffle(domains)
@@ -125,11 +132,10 @@ if __name__ == '__main__':
                 if exp is not None:
                     expired_domains[domain] = exp
             except MyTooManyWhoisQuerisError as e:
-                raise # reraise to stop execution of the script
+                raise  # reraise to stop execution of the script
             except MyWhoisBanError as e:
                 if conf_debug:
                     print(domain)
-                    print(type(e))
                     print(e)
                     print("")
                 domains.append(domain)
@@ -137,7 +143,6 @@ if __name__ == '__main__':
             except (subprocess.CalledProcessError, socket.timeout, socket.error) as e:
                 if conf_debug:
                     print(domain)
-                    print(type(e))
                     print(e)
                     traceback.print_exc(file=sys.stdout)
                     print("")
@@ -145,22 +150,21 @@ if __name__ == '__main__':
         
         # report about problems
         if expired_domains or duplicate_domains:
-            msg_txt = 'Всего проверено %d доменов за %d запросов.\r\n' % ((max_try/conf_try_factor), try_cnt)
+            msg_txt = 'Checked %d domains using %d whois-queries.\r\n' % ((max_try/conf_try_factor), try_cnt)
             if expired_domains:
-                msg_txt += "\r\nИстекающие домены:\r\n"
+                msg_txt += "\r\nExpiring domains:\r\n"
                 for key in expired_domains:
                     msg_txt += "%s %s\r\n" % (key, expired_domains[key])
             if duplicate_domains:
-                msg_txt += "\r\nДублирующиеся записи:\r\n%s\r\n" % ("\r\n".join(duplicate_domains))
+                msg_txt += "\r\nDuplicate entries:\r\n%s\r\n" % ("\r\n".join(duplicate_domains))
             
-            if sys.platform == 'win32':
-                print(msg_txt.encode('cp866', 'ignore'))  # console
+            if sys.platform == 'win32':  # no sendmail here
+                print(msg_txt)
             else:
                 for to in conf_mailto:
-                    my_sendmail(conf_from_email, to, "Истекающие домены", msg_txt) # email
-        
+                    my_sendmail(conf_from_email, to, "Expiring domains", msg_txt)
+    
     except Exception as e:
         print("Top-level exception occured!")
-        print(type(e))
         print(e)
         traceback.print_exc(file=sys.stdout)
