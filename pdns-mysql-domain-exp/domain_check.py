@@ -143,7 +143,6 @@ if __name__ == '__main__':
             except (subprocess.CalledProcessError, socket.timeout, socket.error) as e:
                 if conf_debug:
                     print(domain)
-                    print(e)
                     traceback.print_exc(file=sys.stdout)
                     print("")
                 domains.append(domain)
@@ -166,5 +165,4 @@ if __name__ == '__main__':
     
     except Exception as e:
         print("Top-level exception occured!")
-        print(e)
         traceback.print_exc(file=sys.stdout)
