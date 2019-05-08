@@ -18,7 +18,7 @@ cd pdns-mysql-domain-exp/
 
 ## Settings
 
-Edit `settings.py` and at least configure your MySQL connection to powerdns db 
+Edit `settings.py` and at least configure your MySQL connection(s) to powerdns db 
 and email to receive reports. All other settings are optional.
 
 ## Run
