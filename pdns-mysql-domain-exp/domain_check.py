@@ -75,7 +75,7 @@ def whois_exp_check(domain: str) -> Union[str, None]:
         else:
             raw_whois = pythonwhois.net.get_whois_raw(domain)
     
-    # must e a list (internal pythonwhois format)   
+    # must be a list (internal pythonwhois format)   
     if type(raw_whois) is not list:
         raw_whois = [raw_whois,]
     result = pythonwhois.parse.parse_raw_whois(raw_whois, True)
