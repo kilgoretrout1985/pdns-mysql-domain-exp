@@ -7,12 +7,14 @@ Python 3 only.
 
 ## Install
 
+Copy this into terminal:
+
 ```
-git clone https://github.com/kilgoretrout1985/pdns-mysql-domain-exp.git
-cd pdns-mysql-domain-exp/
-python3 -m venv _env
-source _env/bin/activate
-pip3 install -r requirements.txt
+git clone https://github.com/kilgoretrout1985/pdns-mysql-domain-exp.git && \
+cd pdns-mysql-domain-exp/ && \
+python3 -m venv _env && \
+source _env/bin/activate && \
+pip3 install -r requirements.txt && \
 cd pdns-mysql-domain-exp/
 ```
 
