@@ -1,2 +1,2 @@
-mysqlclient==1.4.2.post1
+mysqlclient==1.4.6
 pythonwhois-alt
